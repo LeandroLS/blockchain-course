@@ -19,6 +19,27 @@ app.post('/transaction', (req, res) => {
     return res.json({'note' : `Transaction will be added in block ${blockIndex}`});
 });
 
+
+app.post('/transaction/broadcast', function(req, res) {
+    const newTransaction = bitcoin.createNewTransaction(req.body.amount, req.body.sender, req.body.recipient);
+    bitcoin.addTransactionToPedindingTransactions(newTransaction);
+    const requestPromises = [];
+    bitcoin.networkNodes.forEach(networkNodeUrl => {
+        const requestOptions = {
+            uri: networkNodeUrl + '/transaction',
+            method: 'post',
+            body: newTransaction,
+            json: true
+        };
+        requestPromises.push(rp(requestOptions));
+    });
+    Promise.all(requestPromises).then(data => {
+        res.json({
+            note: 'Transsaction created and broadcast successfully'
+        });
+    });
+});
+
 app.get('/mine', (req, res) => {
     const lastBlock = bitcoin.getLastBlock();
     const previousBlockHash = lastBlock['hash'];
@@ -98,3 +119,4 @@ app.post('/register-nodes-bulk', function(req, res){
         note: 'Bulk registration successful'
     });
 });
+
